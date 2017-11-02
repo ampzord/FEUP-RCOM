@@ -19,8 +19,8 @@
 #define FALSE 0
 #define TRUE 1
 
-#define ERR 0x36
-#define ERR2 0x35
+#define ERR 0xFD
+#define ERR2 0xFE
 #define PACKET_SIZE 2048
 
 #define FLAG 0x7E
