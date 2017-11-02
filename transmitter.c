@@ -117,7 +117,7 @@ int writeBytes(int fd)
 	int res;
 
 	res = write(fd,ua,5);
-	printArray(ua,5);
+	//printArray(ua,5);
 	printf("UA frame sent with the following values: %02x %02x %02x %02x %02x\n", ua[0], ua[1], ua[2], ua[3], ua[4]);
 	return res;
 }
@@ -181,7 +181,7 @@ int detectRRorREJ(int fd)
 
 	//ADDRESS
 	if(buf[1] != 0x03){
-		printf("Error reading the ADDRESS byte!\n");
+		//printf("Error reading the ADDRESS byte!\n");
 		return -1;
 	}
 
@@ -535,7 +535,7 @@ int llclose(int fd)
 	while(conta < 4)
 	{
 		sendReadDISC(fd,FALSE); //sends DISC
-		printf("DISC frame sent.\n");
+		//printf("DISC frame sent.\n");
 		alarm(3); //starts alarm
 
 		while(!flag && STOP == FALSE) //reads DISC from receiver
