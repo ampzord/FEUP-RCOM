@@ -20,7 +20,7 @@ void printReceiverStats() {
 
 void writeBytes(int fd, char* message){
 
-	printf("SendBytes Initialized\n");
+	//printf("SendBytes Initialized\n");
     int size=strlen(message);
 	int sent = 0;
 
@@ -69,7 +69,7 @@ char readSupervision(int fd, int counter, char C){
 		return ERR;
 	}
 
-	printf("buf[0] = %02x\n", buf[0]);
+	//printf("buf[0] = %02x\n", buf[0]);
 
 	switch(counter){
 	case 0:
@@ -114,11 +114,11 @@ void llopen(int fd, int type){
  char readchar[2];
  int counter = 0;
  if(type == 0){
-	 printf("Reading SET frame with value: ");
+	 //printf("Reading SET frame with value: ");
 	 while (STOP == FALSE) {
 
 	  readchar[0]=readSupervision(fd,counter,0x03);
-	  printf("0x%02x",(unsigned char) readchar[0]);
+	  //printf("0x%02x",(unsigned char) readchar[0]);
 	  readchar[1]='\0';
 	  counter++;
 
@@ -372,7 +372,7 @@ DataPack getPacketRead(int fd,int wantedsize){
 	{
 		res = read(fd,&sp.arr[counter],1);
 		if(counter < 5){
-			printf("%d %02x\n",counter,sp.arr[counter]);
+			//printf("%d %02x\n",counter,(unsigned char) sp.arr[counter]);
 		}
 		if(res == -1)
 		{
@@ -456,7 +456,7 @@ void validateStartPack(int fd){
 }
 
 void writeFileInfo(DataPack data){
-	printf("Writing to file %s -> %d bytes\n",file.arr,data.size);
+	printf("Writing to file %s -> %d bytes\n\n",file.arr,data.size);
 	fwrite(data.arr,1,data.size,fp);
 	receiverStats.successfulMessages++;
 }
@@ -464,7 +464,7 @@ void writeFileInfo(DataPack data){
 void openFile()
 {
 	fp=fopen(file.arr,"wb");
-	if(fp==NULL)
+	if(fp == NULL)
 	{
 		printf("Cannot read file! Exiting... \n");
 		exit(-1);
@@ -556,7 +556,6 @@ void llread(int fd)
 						  printf("Sending RR1\n");
 							write(fd,response.arr,5);
 							receiverStats.rrSent++;
-							receiverStats.rrSent++;
 							packetValidated=TRUE;
 							break;
 						case 0x01:
@@ -582,8 +581,7 @@ void llread(int fd)
 				if(sizeRead >= filepacket.size)
 					readFile = TRUE;
 			}
-			printf("readStart %d \n",readStart);
-			printf("readFile %d \n",readFile);
+			
 		}
 
 	}
@@ -604,7 +602,7 @@ void llclose(int fd){
  	  if(readDISC == FALSE)
 	  	readchar[0] = readSupervision(fd,counter,DISC[2]);
 	  else readchar[0] = readSupervision(fd,counter,ua[2]);
-	  	printf("0x%02x \n",(unsigned char) readchar[0]);
+	  	//printf("0x%02x \n",(unsigned char) readchar[0]);
 	  readchar[1]='\0';
 
 	  counter++;
@@ -675,8 +673,8 @@ int main(int argc, char** argv)
 
     /* set input mode (non-canonical, no echo,...) */
     newtio.c_lflag = 0;
-    newtio.c_cc[VTIME]    = 1;   /* inter-character timer unused */
-    newtio.c_cc[VMIN]     = 1;   /* blocking read until 1 chars received */
+    newtio.c_cc[VTIME]    = 3;   /* inter-character timer unused */
+    newtio.c_cc[VMIN]     = 0;   /* blocking read until 1 chars received */
 
 
 
