@@ -23,6 +23,7 @@
 #define ERR2 0x35
 #define PACKET_SIZE 2048
 
+#define FLAG 0x7E
 #define FLAG_RECEIVER 0x7E
 #define ADDRESS_SENDER_TO_RECEIVER 0x03
 #define CONTROL_UA 0x07
