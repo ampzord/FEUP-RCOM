@@ -19,10 +19,10 @@ void printSenderStats() {
 	printf("---------------------------------------\n");
 	printf("---------------------------------------\n\n");
 
-	/*printf("      Messages sent      : %d\n", senderStats.sentMessages);
+	printf("      Messages sent      : %d\n", senderStats.sentMessages);
 	printf("      RR frame received  : %d\n", senderStats.rrReceived);
 	printf("      REJ frame received : %d\n", senderStats.rejReceived);
-	printf("      Timeout count      : %d\n", senderStats.timeoutNumber);*/
+	printf("      Timeout count      : %d\n", senderStats.timeoutNumber);
 }
 
 /*
@@ -60,7 +60,7 @@ void atende()
 	printf("Alarm #%d\n", conta);
 	flag=TRUE;
 	conta++;
-	//senderStats.timeoutNumber++;
+	senderStats.timeoutNumber++;
 }
 
 /*
@@ -336,7 +336,7 @@ int getDataPacket(int fd)
 			}
 			else
 			{
-				//senderStats.sentMessages++;
+				senderStats.sentMessages++;
 				while(!flag && (RR_RECEIVED == FALSE && REJ_RECEIVED == FALSE)) //while nothing has been received back
 				{
 					detectRRorREJ(fd);
@@ -349,7 +349,7 @@ int getDataPacket(int fd)
 				conta = 0;
 				alarm(0);
 
-				//senderStats.rrReceived++;
+				senderStats.rrReceived++;
 				printf("RR received! Sending next packet...\n\n");
 				dataPacket = memset(dataPacket, 0, PACKET_SIZE); //"restarts" the packet buffer
 				read += bytesRead; //update current byte being read
@@ -489,7 +489,6 @@ unsigned char *buildStartPacket(int fd)
 
 	int res;
 	res = write(fd, dataPackage, sizeFinal);
-	//senderStats.sentMessages++;
 	printf("I start frame sent with the size of %d bytes!\n", res);
 	return 0;
 }
@@ -633,8 +632,7 @@ int main(int argc, char** argv)
 	file.arr = (char*)malloc(file.fileSize);
 	memcpy(file.arr,argv[2],file.fileSize);
 
-	fp = fopen(argv[2],"rb"); //TODO: se quisermos receber nome de ficheiro ver isto
-
+	fp = fopen(argv[2],"rb");
 	fd = open(argv[1], O_RDWR | O_NOCTTY );
 	if (fd <0)
 	{
@@ -665,7 +663,7 @@ int main(int argc, char** argv)
 	}
 	cycle(fd);
 	fclose(fp);
-
+	printSenderStats();
 
 	if ( tcsetattr(fd,TCSANOW,&oldtio) == -1) {
 		perror("tcsetattr");

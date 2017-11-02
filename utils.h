@@ -70,8 +70,25 @@ typedef struct{
 } FileData;
 
 
+typedef struct{
+	int sentMessages;
+	int rrReceived;
+	int rejReceived;
+	int timeoutNumber;
+} SenderStatistics;
+
+typedef struct{
+	int successfulMessages;
+	int receivedMessages;
+	int rrSent;
+	int rejSent;
+} ReceiverStatistics;
+
+
 FileData file;
 FILE *fp;
+SenderStatistics senderStats;
+ReceiverStatistics receiverStats;
 
 void printArray(char* arr,size_t length){
 

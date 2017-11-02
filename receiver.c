@@ -12,10 +12,10 @@ void printReceiverStats() {
 	printf("---------------------------------------\n");
 	printf("---------------------------------------\n\n");
 
-	/*printf("           Messages received  : %d\n", receiverStats.receivedMessages);
+	printf("           Messages received  : %d\n", receiverStats.receivedMessages);
 	printf("Successfull Messages received : %d\n", receiverStats.successfulMessages);
 	printf("           RR frame sent      : %d\n", receiverStats.rrSent);
-	printf("           REJ frame sent     : %d\n", receiverStats.rejSent);*/
+	printf("           REJ frame sent     : %d\n", receiverStats.rejSent);
 }
 
 void writeBytes(int fd, char* message){
@@ -458,7 +458,7 @@ void validateStartPack(int fd){
 void writeFileInfo(DataPack data){
 	printf("Writing to file %s -> %d bytes\n",file.arr,data.size);
 	fwrite(data.arr,1,data.size,fp);
-	//TODO receiverStats.successfulMessages++;
+	receiverStats.successfulMessages++;
 }
 
 void openFile()
@@ -490,6 +490,7 @@ void llread(int fd)
 				DataPack filepacket;
 				while(packetValidated == FALSE)
 				{
+					receiverStats.receivedMessages++;
 					filepacket=getPacketRead(fd,PACKET_SIZE+PACKET_SIZE/2);
 					if(filepacket.arr[0] == -1){
 						printf("Invalid frame!\n");
@@ -517,18 +518,20 @@ void llread(int fd)
 							  memcpy(response.arr,REJ,5);
 							  printf("Sending REJ\n");
 								write(fd,response.arr,5);
+								receiverStats.rejSent++;
 								packetValidated=FALSE;
 								continue;
 							}
 							if(filepacket.arr[0] == -2){
 								printf("Resending RR0\n");
 								write(fd,response.arr,5);
+								receiverStats.rrSent++;
 								packetValidated=FALSE;
 								continue;
 							}
 							printf("Sending RR0\n");
 							write(fd,response.arr,5);
-							//TODO receiverStats.rrSent++;
+							receiverStats.rrSent++;
 							packetValidated = TRUE;
 							break;
 						case 0x40:
@@ -540,7 +543,7 @@ void llread(int fd)
 							  memcpy(response.arr,REJ,5);
 							  printf("Sending REJ\n");
 								write(fd,response.arr,5);
-								//TODO receiverStats.rejSent++;
+								receiverStats.rejSent++;
 								packetValidated=FALSE;
 								continue;
 							}
@@ -552,13 +555,15 @@ void llread(int fd)
 							}
 						  printf("Sending RR1\n");
 							write(fd,response.arr,5);
-							//TODO receiverStats.rrSent++;
+							receiverStats.rrSent++;
+							receiverStats.rrSent++;
 							packetValidated=TRUE;
 							break;
 						case 0x01:
 
 							printf("Sending REJ\n");
 							write(fd,response.arr,5);
+							receiverStats.rejSent++;
 							packetValidated=FALSE;
 							continue;
 					}
@@ -696,7 +701,7 @@ int main(int argc, char** argv)
 	  STOP = FALSE;
 	  llclose(fd);
     sleep(2);
-		//TODO call function
+		printReceiverStats();
 
     tcsetattr(fd,TCSANOW,&oldtio);
     close(fd);
