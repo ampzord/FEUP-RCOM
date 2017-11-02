@@ -10,6 +10,24 @@ int fsize;
 FILE *fp;
 int flag=0, conta=1;
 
+void printSenderStats() {
+	printf("\n\n---------------------------------------\n");
+	printf("---------------------------------------\n");
+	printf("---------------------------------------\n");
+	printf("      Program Sender Statistics        \n");
+	printf("---------------------------------------\n");
+	printf("---------------------------------------\n");
+	printf("---------------------------------------\n\n");
+
+	/*printf("      Messages sent      : %d\n", senderStats.sentMessages);
+	printf("      RR frame received  : %d\n", senderStats.rrReceived);
+	printf("      REJ frame received : %d\n", senderStats.rejReceived);
+	printf("      Timeout count      : %d\n", senderStats.timeoutNumber);*/
+}
+
+/*
+* switch for the C1 byte used in I frame, control byte field
+*/
 void switchC1()
 {
 	if (C1 == 0x00)
@@ -18,6 +36,9 @@ void switchC1()
 		C1 = 0x00;
 }
 
+/*
+* resets the flags telling if RR or REJ have been received. called after receiving the receiver's answer to I frames
+*/
 void resetRRRejFlags()
 {
 	RR_RECEIVED = FALSE;
@@ -31,23 +52,30 @@ void endOfLL()
 	flag = 0;
 }
 
+/*
+* alarm handler
+*/
 void atende()
 {
-	printf("alarme #%d\n", conta);
+	printf("Alarm #%d\n", conta);
 	flag=TRUE;
 	conta++;
+	//senderStats.timeoutNumber++;
 }
 
+/*
+* reads the supervision frame (SET, UA, DISC, RR, REJ) received in fd. Needs a control byte which defines which supervision frame it is
+*/
 int readSupervisionPacket(unsigned char C, int fd)
 {
 	char buf[1];
-	char sup[5] = {FLAG, 0x03, C, 0x03^C, 0x7E};
+	char sup[5] = {FLAG, 0x03, C, 0x03^C, 0x7E}; //creates a temporary frame that matches the "correct" answer
 	int counter = 0;
-	int errorflag =0;
+	int errorflag =0;	//checks for any errors during reading. if any byte does not correspond to the "correct" answer, this flag gets <0 value
 
 	while (STOP==FALSE && counter < 5)
 	{
-		read(fd,buf,1);
+		read(fd,buf,1); //reads one by one
 
 		switch(counter)
 		{
@@ -74,7 +102,7 @@ int readSupervisionPacket(unsigned char C, int fd)
 		};
 		counter++;
 
-		if (counter==5 && errorflag ==0)
+		if (counter==5 && errorflag ==0) //if everything matches the "correct" answer
 		{
 			STOP=TRUE;
 			return 0;
@@ -90,7 +118,7 @@ int writeBytes(int fd)
 
 	res = write(fd,ua,5);
 	printArray(ua,5);
-	printf("writeBytes: %d bytes written\n", res);
+	printf("UA frame sent with the following values: %02x %02x %02x %02x %02x\n", ua[0], ua[1], ua[2], ua[3], ua[4]);
 	return res;
 }
 
@@ -99,9 +127,12 @@ void writeSet(int fd)
 	int res;
 	char set[5] = {0x7E,0x03,0x03,0x00,0x7E};
 	res=write(fd,set,5);
-	printf("writeSet: %d bytes written\n", res);
+	printf("SET frame sent with the following values: %02x %02x %02x %02x %02x\n", set[0], set[1], set[2], set[3], set[4]);
 }
 
+/*
+* reads or sends the DISC frame, according to the toRead flag. if true, reads a DISC frame then sends one back, otherwise just sends one. used in llclose. returns the number of bytes read.
+*/
 int sendReadDISC(int fd,int toRead)
 {
 	if (toRead == TRUE)
@@ -122,6 +153,7 @@ int sendReadDISC(int fd,int toRead)
 	disc[4] = FLAG;
 
 	write(fd,disc,5);
+	printf("DISC frame sent with the following values: %02x %02x %02x %02x %02x\n", disc[0], disc[1], disc[2], disc[3], disc[4]);
 	return 0;
 }
 
@@ -132,44 +164,65 @@ int readUa(int fd)
 	return k;
 }
 
+
+/*
+* checks if a frame is RR or REJ. used in llwrite. returns -1 if there's an error reading, 0 if a RR was read, 1 if a REJ was read
+*/
 int detectRRorREJ(int fd)
 {
 	char buf[5];
 	read(fd,buf,5);
-	//Verifying starting flag
+	
+	//FLAG
 	if(buf[0] != 0x7E){
-		//printf("first byte isn't flag error \n");
+		//printf("Error reading the first 0x7E flag!\n");
 		return -1;
 	}
 
-	//Verifying A
+	//ADDRESS
 	if(buf[1] != 0x03){
-		printf("A in RR/REJ error\n");
+		printf("Error reading the ADDRESS byte!\n");
 		return -1;
 	}
 
-	//Verifying C1
+	//CONTROL = 0x01/0x81 means that this frame is REJ
 	if(buf[2] == 0x01 )
 	{
 		if((buf[1]^buf[2]) != buf[3]){
-				printf("A^C is not equal to BCC1 error");
-				return -1;
+			printf("Error! BCC byte is not equal to ADDRESS XOR CONTROL\n");
+			return -1;
 		}
 
-		if (buf[4] != 0x7E) return -1;
-		printf("Received REJ with no errors\n");
+		//FLAG
+		if (buf[4] != 0x7E) {
+			printf("Error reading the second 0x7E flag!\n");
+			return -1;
+		}
+
+		//SUCCESS
+		printf("REJ read successfully with the values: %02x %02x %02x %02x %02x\n", buf[0], buf[1], buf[2], buf[3], buf[4]);
 		REJ_RECEIVED=TRUE;
 		printArray(buf,5);
 		return 1;
 	}
 
+	//CONTROL = 0x00 or 0x40 means that this frame is RR
 	if(buf[2] == 0x00 || buf[2]==0x40){
+
+		//BCC
 		if((buf[1]^buf[2]) != buf[3]){
-				printf("A^C is not equal to BCC1 error");
-				return -1;
+			printf("Error! BCC byte is not equal to ADDRESS XOR CONTROL\n");
+			return -1;
 		}
-		if (buf[4] != 0x7E) return -1;
-		printf("Received RR(%02x) with no errors\n",buf[2]);
+		
+		//FLAG
+		if (buf[4] != 0x7E) {
+			printf("Error reading the second 0x7E flag!\n");
+			return -1;
+		}
+
+		//SUCCESS
+		printf("RR read successfully with the values: %02x %02x %02x %02x %02x\n", buf[0], buf[1], buf[2], buf[3], buf[4]);
 		RR_RECEIVED=TRUE;
 		printArray(buf,5);
 		switchC1();
@@ -178,12 +231,16 @@ int detectRRorREJ(int fd)
 	return -1;
 }
 
-int sendInfoFile(int fd, unsigned char *buf, int size) //Handles the process of sending portions of the file to receiver
+/*
+* send the file packets through fd to the receiver
+*/
+int sendInfoFile(int fd, unsigned char *buf, int size)
 {
-	int newSize = (size+6),i,j,res,k;
+	int newSize = (size + 6); //total size = original size + 6 because of the F, A, C, BCC1, BCC2, F bytes
+	int i, j, res, k;
 	unsigned char BCC2,BCC1;
 
-	for (i = 0; i < size; i++)
+	for (i = 0; i < size; i++) //cycles though the original packet to check if there's any 0x7E or 0x7D. if so, the total size of the packet post-stuffing is increased by one of each found
 	{
 		if (buf[i] == 0x7E || buf[i] == 0x7D)
 		{
@@ -191,13 +248,14 @@ int sendInfoFile(int fd, unsigned char *buf, int size) //Handles the process of 
 		}
 	}
 
-	//COMPUTING BCC2
+	//BBC = buf[0] ^ buf[1] ^ ... ^ buf[size - 1]
 	BCC2 = buf[0] ^ buf[1];
 	for (i = 2; i < size;i++)
 	{
 		BCC2 = BCC2^buf[i];
 	}
 
+	//creates the new packet
 	unsigned char *dataPacket = (unsigned char*)malloc(newSize);
 
 	dataPacket[0] = FLAG;
@@ -206,6 +264,7 @@ int sendInfoFile(int fd, unsigned char *buf, int size) //Handles the process of 
 	BCC1 = dataPacket[1]^C1;
 	dataPacket[3] = BCC1;
 
+	//STARTING STUFFING
 	j = 5;
 	k = 4;
 	for (i = 0; i < size;i++)
@@ -232,77 +291,84 @@ int sendInfoFile(int fd, unsigned char *buf, int size) //Handles the process of 
 		j++;
 		k++;
 	}
+	//ENDS STUFFING
 
 	dataPacket[newSize-2] = BCC2;
 	dataPacket[newSize-1] = FLAG;
+	//ENDS I FRAME FLAGS
 
+	//writes complete and stuffed packet to fd
 	res = write(fd,dataPacket,newSize);
-		printf("5th byte of datapacket 0x%02x\n",dataPacket[4]);
 	if (res == 0 || res == -1)
 	{
-		printf("sendInfoFile() - %d bytes written.\n",res);
+		printf("Sending file, wrote %d bytes.\n", res);
 		return res;
 	}
 	return res;
 }
 
-int getDataPacket(int fd) //Handles the process of dividing file into PACKET_SIZE bytes portions
+/*
+* Handles the process of dividing file into PACKET_MAX_SIZE bytes portions. Returns the starting byte number of the packet being read
+*/
+int getDataPacket(int fd)
 {
-	//fp = fopen("pinguim.gif","rb"); //TODO: se quisermos receber nome de ficheiro ver isto
 	int bytesRead = 0,res,read = 0;
 
-	unsigned char *dataPacket = (unsigned char *)malloc(PACKET_SIZE);
+	unsigned char *dataPacket = (unsigned char *)malloc(PACKET_SIZE); //creates data packet with preset size
 
 	//READ PACKET_SIZE BYTES "AT A TIME"
-	while ((bytesRead = fread(dataPacket, sizeof(unsigned char), PACKET_SIZE, fp)) > 0)
+	while ((bytesRead = fread(dataPacket, sizeof(unsigned char), PACKET_SIZE, fp)) > 0) //reads from the fp FILE (global access) to the dataPacket to send, reading a char * PACKET_MAX_SIZE. this while cycles until it starts reading nothing (end of file)
 	{
-		while (conta < 4)
+		while (conta < 4) //timeout limit
 		{
-			res = sendInfoFile(fd,dataPacket,bytesRead);
+			res = sendInfoFile(fd,dataPacket,bytesRead); //creates a "ready to send" data packet and writes it to fd, returning the number of bytes sent
 
-			printf("READ IS : %d/%d \n",read,fsize);
+			printf("Sending file, currently at: %d/%d (%.2lf%%/100%%).\n", read, fsize, ((double)read / fsize) * 100);
+
+			//starts alarm
 			flag = FALSE;
 			alarm(3);
 
-			if (res == -1)
+			if (res == -1) //error case
 			{
 				while (!flag){}
 				continue;
 			}
 			else
 			{
-				while(!flag && (RR_RECEIVED == FALSE && REJ_RECEIVED == FALSE))
+				//senderStats.sentMessages++;
+				while(!flag && (RR_RECEIVED == FALSE && REJ_RECEIVED == FALSE)) //while nothing has been received back
 				{
 					detectRRorREJ(fd);
-					//printf("inside wait while RR_RECEIVED:%d REJ_RECEIVED:%d\n",RR_RECEIVED,REJ_RECEIVED	);
 				}
 			}
 
 			if (RR_RECEIVED)
 			{
+				//stops alarm
 				conta = 0;
 				alarm(0);
-				printf("RR TRUE - inside rr IF\n");
-				printf("NEXT PACKET\n");
-				dataPacket = memset(dataPacket, 0, PACKET_SIZE);
-				read += bytesRead;
+
+				//senderStats.rrReceived++;
+				printf("RR received! Sending next packet...\n\n");
+				dataPacket = memset(dataPacket, 0, PACKET_SIZE); //"restarts" the packet buffer
+				read += bytesRead; //update current byte being read
 				resetRRRejFlags();
 				break;
 			}
 			if (REJ_RECEIVED)
 			{
-				printf("REJ Received TRUE - inside REJ IF\n");
-				printf("RESENDING...\n");
+				senderStats.rejReceived++;
+				printf("REJ received! Resending the same packet...\n\n");
 				resetRRRejFlags();
 				continue;
 			}
-			printf("No RR or REJ received \n");
-
+			printf("RR nor REJ received. Retrying...\n\n");
 			resetRRRejFlags();
 			continue;
 		}
 		if(conta>=4){
-			printf("TIMEDOUT WITH READBYTES %d",read);
+			printf("Maximum timeouts reached! Stopping sending file at byte number %d\n\n", read);
 			return read;
 		}
 	}
@@ -310,6 +376,9 @@ int getDataPacket(int fd) //Handles the process of dividing file into PACKET_SIZ
 	return read;
 }
 
+/*
+* builds and sends the starting I frame
+*/
 unsigned char *buildStartPacket(int fd)
 {
 	int i=0, j=0;
@@ -332,7 +401,7 @@ unsigned char *buildStartPacket(int fd)
 	startBuf[2] = 0x04;
 	int* intloc= (int*)(&startBuf[3]);
 	*intloc=fsize;
-	startBuf[7] = 0x01;
+	startBuf[7] = 0x01; //starts at index 7 because of the 0x04 at index 2. So file size occupies 4 bytes, indexes 3, 4, 5 and 6.
 	startBuf[8] = file.fileSize;
 
 	//INSERTS FILE NAME IN ARRAY
@@ -341,7 +410,7 @@ unsigned char *buildStartPacket(int fd)
 		startBuf[i+9] = file.arr[i];
 	}
 
-	//COMPUTE FINAL SIZE OF DATA ARRAY
+	//calculation packet final size (updated later in the function)
 	int sizeFinal = startBufSize+6;
 	for (i = 0; i < startBufSize;i++)
 	{
@@ -349,15 +418,16 @@ unsigned char *buildStartPacket(int fd)
 			sizeFinal++;
 	}
 
-	//COMPUTING BCC2
+	//BCC2 value
 	BCC2 = startBuf[0]^startBuf[1];
 	for (i = 2; i < startBufSize;i++)
 	{
 		BCC2 = BCC2^startBuf[i];
 	}
-	//printf("BCC2: %02X\n\n",BCC2);
 
 	unsigned char *dataPackage;
+
+	//hard code stuffing and insertion of bcc2
 	if (BCC2 == 0x7E)
 	{
 		dataPackage = (unsigned char *)malloc(sizeFinal+1);
@@ -378,12 +448,14 @@ unsigned char *buildStartPacket(int fd)
 		 dataPackage[sizeFinal-2] = BCC2;
 	}
 
+	//STARTING FLAGS
 	dataPackage[0] = FLAG;
 	dataPackage[1] = A;
 	dataPackage[2] = 0x00;
 	BCC1 = A^dataPackage[2];
 	dataPackage[3] = BCC1;
 
+	//STARTING STUFFING
 	j = 5;
 	int k=4;
 	for (i = 0; i < startBufSize;i++)
@@ -410,17 +482,21 @@ unsigned char *buildStartPacket(int fd)
 		j++;
 		k++;
 	}
+	//FINISH STUFFING
+
 	dataPackage[sizeFinal-1] = FLAG;
+	//FINISH FLAGS
 
 	int res;
 	res = write(fd, dataPackage, sizeFinal);
-
-	printf("%d bytes written\n",res);
+	//senderStats.sentMessages++;
+	printf("I start frame sent with the size of %d bytes!\n", res);
 	return 0;
 }
 
 int llwrite(int fd)
 {
+	printf("Entering LLWRITE\n");
 	int res;
 	buildStartPacket(fd);
 	res = getDataPacket(fd);
@@ -430,19 +506,19 @@ int llwrite(int fd)
 
 int llopen(int fd)
 {
-
-	while(conta < 4)
+	printf("Entering LLOPEN\n");
+	while(conta < 4) //timeouts
 	{
-		writeSet(fd);
-		alarm(3);
-
-		while(!flag && STOP == FALSE)
+		writeSet(fd); //writes SET
+		alarm(3); //starting alarm
+		
+		while(!flag && STOP == FALSE) //reads UA
 		{
 			readUa(fd);
 		}
 		if(STOP==TRUE)
 		{
-			alarm(0);
+			alarm(0); //if successfully read, stops the alarm
 			endOfLL();
 			return 0;
 		}
@@ -454,20 +530,21 @@ int llopen(int fd)
 
 int llclose(int fd)
 {
+	printf("Entering LLCLOSE\n");
 	int receivedDISC = FALSE;
 	int res = 0;
 	while(conta < 4)
 	{
-		sendReadDISC(fd,FALSE);
-		printf("DISCONNECT Sent.\n");
-		alarm(3);
+		sendReadDISC(fd,FALSE); //sends DISC
+		printf("DISC frame sent.\n");
+		alarm(3); //starts alarm
 
-		while(!flag && STOP == FALSE)
+		while(!flag && STOP == FALSE) //reads DISC from receiver
 		{
 			res = sendReadDISC(fd,TRUE);
 			
 			if (res == 0){
-				printf("DISCONNECT Received.\n");				
+				printf("DISC frame received successfully!\n");
 				STOP = TRUE;
 				receivedDISC=TRUE;
 			}
@@ -487,16 +564,18 @@ int llclose(int fd)
 		return -1;	
 	
 	}
-	res = writeBytes(fd);
+	res = writeBytes(fd); //writes UA
 	if (res == 5)
 	{
-		printf("UA SENT...\n");
-		printf("------END------\n");
+		printf("UA frame sent! Leaving LLCLOSE...\n");
 	}
 
 	return 0;
 }
 
+/*
+* cycle which determines if file was sent
+*/
 int cycle(int fd)
 {
 	int fsize, finish = 0,res,counter=0,read=0;
@@ -509,22 +588,25 @@ int cycle(int fd)
 		if(counter >=4)
 			return -1;
 		counter++;
-		printf("Starting llopen()\n");
 		read = 0;
+
 		res = llopen(fd);
+
 		if (res == -1)
 		{
-			printf("Leaving application. llopen() failed\n");
+			printf("LLOPEN failed, finishing program...\n");
 			return -1;
 		}
 		read = llwrite(fd);
+
 		if (read < fsize)
 		{
-			printf("read:%d fsize:%d\n",read,fsize);
 			continue;
 		}
-		else
+		else {
+			printf("File sent successfully\n");
 			finish = 1;
+		}
 	}
 
 	if(llclose(fd)==-1)

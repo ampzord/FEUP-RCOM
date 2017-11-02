@@ -258,14 +258,14 @@ ResponseArray readInfPackHeader(int fd, char* buf){
 	//FIRST FLAG
 	if(buf[0] != 0x7E){
 
-		printf("first byte isn't flag error \n");
+		printf("Error reading the FLAG_RECEIVER: 0x7E flag!\n");
 		memcpy(response.arr,REJ,5);
 		return response;
 	}
 
 	//ADDRESS
 	if(buf[1] != 0x03){
-		printf("read error in (A) \n");
+		printf("Error reading the ADDRESS byte!\n");
 		memcpy(response.arr,REJ,5);
 		return response;
 	}
@@ -279,14 +279,14 @@ ResponseArray readInfPackHeader(int fd, char* buf){
 				return response;
 			}
 		}
-		printf("read error in (C)");
+		printf("Error reading the CONTROL byte!\n");
 		memcpy(response.arr,REJ,5);
 		return response;
 	}
 
 	//Verifying BCC1
 	if((buf[1]^buf[2]) != buf[3]){
-		printf("A^C is not equal to BCC1 error");
+		printf("Error! BCC byte is not equal to ADDRESS XOR CONTROL\n");
 		memcpy(response.arr,REJ,5);
 		return response;
 
@@ -327,7 +327,7 @@ ResponseArray readStartPacketInfo(char * startPacket, ResponseArray res)
 
 	//output is 00002ad8
 	file.fileSize=strtol(temp,NULL,16);
-	printf("FILESIZE IS %d \n",file.fileSize);
+	printf("File size is: %d bytes.\n", file.fileSize);
 	if(file.fileSize<0 || file.fileSize>4*pow(10,9))
 	{
 		memcpy(res.arr,REJ,5);
@@ -515,7 +515,7 @@ void llread(int fd)
 								packetValidated=FALSE;
 							  free(filepacket.arr);
 							  memcpy(response.arr,REJ,5);
-							  printf("Sending REJ - 0x00\n");
+							  printf("Sending REJ\n");
 								write(fd,response.arr,5);
 								packetValidated=FALSE;
 								continue;
@@ -538,7 +538,7 @@ void llread(int fd)
 								packetValidated=FALSE;
 							  free(filepacket.arr);
 							  memcpy(response.arr,REJ,5);
-							  printf("Sending REJ - 0x40\n");
+							  printf("Sending REJ\n");
 								write(fd,response.arr,5);
 								//TODO receiverStats.rejSent++;
 								packetValidated=FALSE;
@@ -557,7 +557,7 @@ void llread(int fd)
 							break;
 						case 0x01:
 
-							printf("Sending REJ - 0x01\n");
+							printf("Sending REJ\n");
 							write(fd,response.arr,5);
 							packetValidated=FALSE;
 							continue;
