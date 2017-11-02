@@ -556,7 +556,6 @@ void llread(int fd)
 						  printf("Sending RR1\n");
 							write(fd,response.arr,5);
 							receiverStats.rrSent++;
-							receiverStats.rrSent++;
 							packetValidated=TRUE;
 							break;
 						case 0x01:
@@ -676,7 +675,7 @@ int main(int argc, char** argv)
     /* set input mode (non-canonical, no echo,...) */
     newtio.c_lflag = 0;
     newtio.c_cc[VTIME]    = 1;   /* inter-character timer unused */
-    newtio.c_cc[VMIN]     = 1;   /* blocking read until 1 chars received */
+    newtio.c_cc[VMIN]     = 0;   /* blocking read until 1 chars received */
 
 
 
