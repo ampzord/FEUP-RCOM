@@ -202,7 +202,7 @@ int detectRRorREJ(int fd)
 		//SUCCESS
 		printf("REJ read successfully with the values: %02x %02x %02x %02x %02x\n", buf[0], buf[1], buf[2], buf[3], buf[4]);
 		REJ_RECEIVED=TRUE;
-		printArray(buf,5);
+		//printArray(buf,5);
 		return 1;
 	}
 
@@ -224,7 +224,7 @@ int detectRRorREJ(int fd)
 		//SUCCESS
 		printf("RR read successfully with the values: %02x %02x %02x %02x %02x\n", buf[0], buf[1], buf[2], buf[3], buf[4]);
 		RR_RECEIVED=TRUE;
-		printArray(buf,5);
+		//printArray(buf,5);
 		switchC1();
 		return 0;
 	}
