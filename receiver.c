@@ -1,6 +1,7 @@
 #include "utils.h"
 
 char lastBCC2=0xFF;
+unsigned int bitcount = 0;
 
 
 void printReceiverStats() {
@@ -74,25 +75,30 @@ char readSupervision(int fd, int counter, char C){
 	switch(counter){
 	case 0:
 		if(buf[0]==set[0]){
+			bitcount++;
 			return 0x7E;
 		}
 		return ERR;
 	case 1:
 		if(buf[0]==set[1]){
+			bitcount++;
 			return 0x03;
 		}
 		return ERR;
 	case 2:
 		if(buf[0]==set[2]){
+			bitcount++;
 			return C;
 		}
 		//special case;
 		if(C==0x07 && buf[0]==0x0B){
+			bitcount++;
 			return 0x0C;
 		}
 		return ERR;
 	case 3:
 		if(buf[0]==set[3]){
+			bitcount++;
 			return buf[0];
 		}
 		return ERR2;
@@ -399,6 +405,7 @@ DataPack getPacketRead(int fd,int wantedsize){
 		counter++;
 	}
 
+	bitcount += counter;
 	return sp;
 }
 
@@ -581,7 +588,7 @@ void llread(int fd)
 				if(sizeRead >= filepacket.size)
 					readFile = TRUE;
 			}
-			
+
 		}
 
 	}
@@ -694,12 +701,18 @@ int main(int argc, char** argv)
 
     printf("New termios structure set\n");
 
+		clock_t begin = clock();
   	llopen(fd,0);
 	  llread(fd);
 	  STOP = FALSE;
 	  llclose(fd);
+		clock_t end = clock();
+
     sleep(2);
 		printReceiverStats();
+		printf("\n\nNumber of bytes read = %d bytes\n", bitcount);
+		printf("%d\n", CLOCKS_PER_SEC);
+		printf("Time of execution: %f seconds\n", (double)(end - begin) / CLOCKS_PER_SEC);
 
     tcsetattr(fd,TCSANOW,&oldtio);
     close(fd);
