@@ -22,36 +22,36 @@ void printReceiverStats() {
 void writeBytes(int fd, char* message){
 
 	//printf("SendBytes Initialized\n");
-    int size=strlen(message);
+	int size=strlen(message);
 	int sent = 0;
 
-    while( (sent = write(fd,message,size+1)) < size ){
-        size -= sent;
-    }
+	while( (sent = write(fd,message,size+1)) < size ){
+		size -= sent;
+	}
 
 }
 
 char * readBytes(int fd){
-   	char* collectedString=malloc (sizeof (char) * 255);
+	char* collectedString=malloc (sizeof (char) * 255);
 	char buf[2];
 	int counter=0,res=0;
     while (STOP==FALSE) {       /* loop for input */
 
 	  res = read(fd,buf,1);   /* returns after 1 chars have been input */
 
-	  if(res==-1)
+	if(res==-1)
 		exit(-1);
-	  buf[1]='\0';
-      collectedString[counter]=buf[0];
+	buf[1]='\0';
+	collectedString[counter]=buf[0];
 
-      if (buf[0]=='\0'){
-	  collectedString[counter]=buf[0];
-	  STOP=TRUE;
-      }
-      counter++;
-    }
-    printf("end result:%s\n",collectedString);
-	return collectedString;
+	if (buf[0]=='\0'){
+		collectedString[counter]=buf[0];
+		STOP=TRUE;
+	}
+	counter++;
+}
+printf("end result:%s\n",collectedString);
+return collectedString;
 
 }
 
@@ -63,7 +63,7 @@ char readSupervision(int fd, int counter, char C){
 	char set[5]={0x7E,0x03,C,0x03^C,0x7E};
 	char buf[1];
 	int res=0;
-  res = read(fd,buf,1);
+	res = read(fd,buf,1);
 
 	if(res==-1){
 		printf("Error reading, returning ERROR...\n");
@@ -73,19 +73,19 @@ char readSupervision(int fd, int counter, char C){
 	//printf("buf[0] = %02x\n", buf[0]);
 
 	switch(counter){
-	case 0:
+		case 0:
 		if(buf[0]==set[0]){
 			bitcount++;
 			return 0x7E;
 		}
 		return ERR;
-	case 1:
+		case 1:
 		if(buf[0]==set[1]){
 			bitcount++;
 			return 0x03;
 		}
 		return ERR;
-	case 2:
+		case 2:
 		if(buf[0]==set[2]){
 			bitcount++;
 			return C;
@@ -96,18 +96,18 @@ char readSupervision(int fd, int counter, char C){
 			return 0x0C;
 		}
 		return ERR;
-	case 3:
+		case 3:
 		if(buf[0]==set[3]){
 			bitcount++;
 			return buf[0];
 		}
 		return ERR2;
-	case 4:
+		case 4:
 		if(buf[0]==set[4]){
 			return 0X7E;
 		}
 		return ERR;
-  default:
+		default:
 		return ERR;
 	}
 }
@@ -116,34 +116,34 @@ char readSupervision(int fd, int counter, char C){
 * Reads SET frame and replies with UA frame
 */
 void llopen(int fd, int type){
- char ua[5]={0x7E,0x03,0x07,0x03^0x07,0x7E};
- char readchar[2];
- int counter = 0;
- if(type == 0){
+	char ua[5]={0x7E,0x03,0x07,0x03^0x07,0x7E};
+	char readchar[2];
+	int counter = 0;
+	if(type == 0){
 	 //printf("Reading SET frame with value: ");
-	 while (STOP == FALSE) {
+		while (STOP == FALSE) {
 
-	  readchar[0]=readSupervision(fd,counter,0x03);
+			readchar[0]=readSupervision(fd,counter,0x03);
 	  //printf("0x%02x",(unsigned char) readchar[0]);
-	  readchar[1]='\0';
-	  counter++;
+			readchar[1]='\0';
+			counter++;
 
-	  if(readchar[0] == ERR){
-	  	counter=0;
-	  }
+			if(readchar[0] == ERR){
+				counter=0;
+			}
 
-	  if(readchar[0] == ERR2){
-	  	counter=-1;
-	  }
+			if(readchar[0] == ERR2){
+				counter=-1;
+			}
 
-	  if(counter == 5){
-		 STOP = TRUE;
-		 printf("\nSET frame read successfully!\n");
-	  }
-	 }
- }
- writeBytes(fd,ua);
- printf("\nUA frame sent!\n");
+			if(counter == 5){
+				STOP = TRUE;
+				printf("\nSET frame read successfully!\n");
+			}
+		}
+	}
+	writeBytes(fd,ua);
+	printf("\nUA frame sent!\n");
 }
 
 /*
@@ -195,17 +195,17 @@ DataPack destuffPack(DataPack todestuff)
 	{
 
 		if(todestuff.arr[i] == 0x7E){
-					printf("Stuffing failed, found 0x7E before final position of packet\n");
-					return makeErrorPack(-1);
+			printf("Stuffing failed, found 0x7E before final position of packet\n");
+			return makeErrorPack(-1);
 		}
 
 		//no flags
 		if(todestuff.arr[i] != 0x7D){
 
-		 dbuf[j] = todestuff.arr[i];
-		 i++;
-		 j++;
-		 continue;
+			dbuf[j] = todestuff.arr[i];
+			i++;
+			j++;
+			continue;
 		}
 
 		if(todestuff.arr[i] == 0x7D){
@@ -215,7 +215,7 @@ DataPack destuffPack(DataPack todestuff)
 				i = i+2;
 				j++;
 				continue;
-		 	}
+			}
 
 			if(todestuff.arr[i+1] == 0x5d){
 				dbuf[j] = 0x7D;
@@ -234,8 +234,8 @@ DataPack destuffPack(DataPack todestuff)
 		return makeErrorPack(-1);
 	}
 
-  dataPacket.size=j;
-  dataPacket.arr=dbuf;
+	dataPacket.size=j;
+	dataPacket.arr=dbuf;
 
 	if(validateBCC2(dataPacket,(unsigned char)todestuff.arr[todestuff.size-2]) == -1){
 		printf("BCC2 doesn't match with BCC2 of received contents, please resend Packet\n");
@@ -425,7 +425,7 @@ void validateStartPack(int fd){
 	}
 
 
-  if(response.arr[2] == 0x01){
+	if(response.arr[2] == 0x01){
 		readStart = FALSE;
 		return;
 	}
@@ -454,12 +454,12 @@ void validateStartPack(int fd){
 		readStart=TRUE;
 		break;
 
-    default:
+		default:
 		printf("Rejecting invalid Starter Packet, try again \n");
 		writeBytes(fd,response.arr);
 		readStart=FALSE;
 		break;
-	 }
+	}
 }
 
 void writeFileInfo(DataPack data){
@@ -492,7 +492,7 @@ void llread(int fd)
 			openFile();
 			int sizeRead=0;
 
-		 	while (sizeRead < file.fileSize)
+			while (sizeRead < file.fileSize)
 			{
 				DataPack filepacket;
 				while(packetValidated == FALSE)
@@ -509,69 +509,69 @@ void llread(int fd)
 
 					if(response.arr[0] == ERR2)
 					{
-					  printf("Detected SET, Resent UA, going to try and read new Start Pack\n");
-					  sizeRead=0;
-					  readStart=FALSE;
-					  break;
-				  }
+						printf("Detected SET, Resent UA, going to try and read new Start Pack\n");
+						sizeRead=0;
+						readStart=FALSE;
+						break;
+					}
 
-				    switch(response.arr[2])
+					switch(response.arr[2])
 					{
 						case 0x00:
-							filepacket = destuffPack(filepacket);
-							if(filepacket.arr[0]==-1){
-								packetValidated=FALSE;
-							  free(filepacket.arr);
-							  memcpy(response.arr,REJ,5);
-							  printf("Sending REJ\n");
-								write(fd,response.arr,5);
-								receiverStats.rejSent++;
-								packetValidated=FALSE;
-								continue;
-							}
-							if(filepacket.arr[0] == -2){
-								printf("Resending RR0\n");
-								write(fd,response.arr,5);
-								receiverStats.rrSent++;
-								packetValidated=FALSE;
-								continue;
-							}
-							printf("Sending RR0\n");
-							write(fd,response.arr,5);
-							receiverStats.rrSent++;
-							packetValidated = TRUE;
-							break;
-						case 0x40:
-
-							filepacket = destuffPack(filepacket);
-							if(filepacket.arr[0]==-1){
-								packetValidated=FALSE;
-							  free(filepacket.arr);
-							  memcpy(response.arr,REJ,5);
-							  printf("Sending REJ\n");
-								write(fd,response.arr,5);
-								receiverStats.rejSent++;
-								packetValidated=FALSE;
-								continue;
-							}
-							if(filepacket.arr[0]==-2){
-								printf("Resending RR1\n");
-								write(fd,response.arr,5);
-								packetValidated=FALSE;
-								continue;
-							}
-						  printf("Sending RR1\n");
-							write(fd,response.arr,5);
-							receiverStats.rrSent++;
-							packetValidated=TRUE;
-							break;
-						case 0x01:
-
+						filepacket = destuffPack(filepacket);
+						if(filepacket.arr[0]==-1){
+							packetValidated=FALSE;
+							free(filepacket.arr);
+							memcpy(response.arr,REJ,5);
 							printf("Sending REJ\n");
 							write(fd,response.arr,5);
 							receiverStats.rejSent++;
 							packetValidated=FALSE;
 							continue;
+						}
+						if(filepacket.arr[0] == -2){
+							printf("Resending RR0\n");
+							write(fd,response.arr,5);
+							receiverStats.rrSent++;
+							packetValidated=FALSE;
+							continue;
+						}
+						printf("Sending RR0\n");
+						write(fd,response.arr,5);
+						receiverStats.rrSent++;
+						packetValidated = TRUE;
+						break;
+						case 0x40:
+
+						filepacket = destuffPack(filepacket);
+						if(filepacket.arr[0]==-1){
+							packetValidated=FALSE;
+							free(filepacket.arr);
+							memcpy(response.arr,REJ,5);
+							printf("Sending REJ\n");
+							write(fd,response.arr,5);
+							receiverStats.rejSent++;
+							packetValidated=FALSE;
+							continue;
+						}
+						if(filepacket.arr[0]==-2){
+							printf("Resending RR1\n");
+							write(fd,response.arr,5);
+							packetValidated=FALSE;
+							continue;
+						}
+						printf("Sending RR1\n");
+						write(fd,response.arr,5);
+						receiverStats.rrSent++;
+						packetValidated=TRUE;
+						break;
+						case 0x01:
+
+						printf("Sending REJ\n");
+						write(fd,response.arr,5);
+						receiverStats.rejSent++;
+						packetValidated=FALSE;
+						continue;
 					}
 				}
 
@@ -599,64 +599,64 @@ void llread(int fd)
 }
 
 void llclose(int fd){
- char ua[5] = {0x7E,0x03,0x07,0x03^0x07,0x7E};
- int readDISC =FALSE;
- char DISC[5] ={0x7E,0x03,0X0B,0X03^0X0B,0X7E};
- char readchar[2];
- int counter = 0;
+	char ua[5] = {0x7E,0x03,0x07,0x03^0x07,0x7E};
+	int readDISC =FALSE;
+	char DISC[5] ={0x7E,0x03,0X0B,0X03^0X0B,0X7E};
+	char readchar[2];
+	int counter = 0;
 
- while (STOP == FALSE) {
- 	  if(readDISC == FALSE)
-	  	readchar[0] = readSupervision(fd,counter,DISC[2]);
-	  else readchar[0] = readSupervision(fd,counter,ua[2]);
+	while (STOP == FALSE) {
+		if(readDISC == FALSE)
+			readchar[0] = readSupervision(fd,counter,DISC[2]);
+		else readchar[0] = readSupervision(fd,counter,ua[2]);
 	  	//printf("0x%02x \n",(unsigned char) readchar[0]);
-	  readchar[1]='\0';
+		readchar[1]='\0';
 
-	  counter++;
+		counter++;
 
-	  if(readchar[0] == ERR){
-	  	counter=0;
-	  }
+		if(readchar[0] == ERR){
+			counter=0;
+		}
 
-	  if(readchar[0] == ERR2){
-	  	counter=-1;
-	  }
+		if(readchar[0] == ERR2){
+			counter=-1;
+		}
 
-	  if(readchar[0] == 0x0C){
-	  	counter = 0;
-	    printf("Sending DISC...\n");
-	 		writeBytes(fd,DISC);
-	  }
+		if(readchar[0] == 0x0C){
+			counter = 0;
+			printf("Sending DISC...\n");
+			writeBytes(fd,DISC);
+		}
 
-	  if (counter == 5){
+		if (counter == 5){
 
-		 if(readDISC == TRUE){
-		    printf("Read UA, terminating...\n");
-		 		STOP = TRUE;
-		 }
+			if(readDISC == TRUE){
+				printf("Read UA, terminating...\n");
+				STOP = TRUE;
+			}
 
-		 if(readDISC == FALSE){
-	 	  printf("Resending DISC...\n");
-	 	  writeBytes(fd,DISC);
-	 	  counter = 0;
-    	 }
-		 readDISC = TRUE;
+			if(readDISC == FALSE){
+				printf("Resending DISC...\n");
+				writeBytes(fd,DISC);
+				counter = 0;
+			}
+			readDISC = TRUE;
 
-	  }
+		}
 	}
- }
+}
 
 int main(int argc, char** argv)
 {
-    int fd;
-    struct termios oldtio,newtio;
+	int fd;
+	struct termios oldtio,newtio;
 
-    if ( (argc < 2) ||
-  	     ((strcmp("/dev/ttyS0", argv[1])!=0) &&
-  	      (strcmp("/dev/ttyS1", argv[1])!=0) )) {
-      printf("Usage:\tnserial SerialPort\n\tex: nserial /dev/ttyS1\n");
-      exit(-1);
-    }
+	if ( (argc < 2) ||
+		((strcmp("/dev/ttyS0", argv[1])!=0) &&
+			(strcmp("/dev/ttyS1", argv[1])!=0) )) {
+		printf("Usage:\tnserial SerialPort\n\tex: nserial /dev/ttyS1\n");
+	exit(-1);
+}
 
 
   /*
@@ -665,21 +665,21 @@ int main(int argc, char** argv)
   */
 
 
-    fd = open(argv[1], O_RDWR | O_NOCTTY );
-    if (fd <0) {perror(argv[1]); exit(-1); }
+fd = open(argv[1], O_RDWR | O_NOCTTY );
+if (fd <0) {perror(argv[1]); exit(-1); }
 
     if ( tcgetattr(fd,&oldtio) == -1) { /* save current port settings */
-      perror("tcgetattr");
-      exit(-1);
-    }
+perror("tcgetattr");
+exit(-1);
+}
 
-    bzero(&newtio, sizeof(newtio));
-    newtio.c_cflag = BAUDRATE | CS8 | CLOCAL | CREAD;
-    newtio.c_iflag = IGNPAR;
-    newtio.c_oflag = 0;
+bzero(&newtio, sizeof(newtio));
+newtio.c_cflag = BAUDRATE | CS8 | CLOCAL | CREAD;
+newtio.c_iflag = IGNPAR;
+newtio.c_oflag = 0;
 
     /* set input mode (non-canonical, no echo,...) */
-    newtio.c_lflag = 0;
+newtio.c_lflag = 0;
     newtio.c_cc[VTIME]    = 3;   /* inter-character timer unused */
     newtio.c_cc[VMIN]     = 0;   /* blocking read until 1 chars received */
 
@@ -692,29 +692,37 @@ int main(int argc, char** argv)
 
 
 
-    tcflush(fd, TCIOFLUSH);
+tcflush(fd, TCIOFLUSH);
 
-    if ( tcsetattr(fd,TCSANOW,&newtio) == -1) {
-      perror("tcsetattr");
-      exit(-1);
-    }
+if ( tcsetattr(fd,TCSANOW,&newtio) == -1) {
+	perror("tcsetattr");
+	exit(-1);
+}
 
-    printf("New termios structure set\n");
+printf("New termios structure set\n");
 
-		clock_t begin = clock();
-  	llopen(fd,0);
-	  llread(fd);
-	  STOP = FALSE;
-	  llclose(fd);
-		clock_t end = clock();
+time_t start, end;
+double elapsed;
+time(&start);  /* start the timer */
 
-    sleep(2);
-		printReceiverStats();
-		printf("\n\nNumber of bytes read = %d bytes\n", bitcount);
-		printf("%d\n", CLOCKS_PER_SEC);
-		printf("Time of execution: %f seconds\n", (double)(end - begin) / CLOCKS_PER_SEC);
+llopen(fd,0);
+llread(fd);
+STOP = FALSE;
+llclose(fd);
+time(&end);
+elapsed = difftime(end, start);
 
-    tcsetattr(fd,TCSANOW,&oldtio);
-    close(fd);
-    return 0;
+sleep(2);
+printReceiverStats();
+
+printf("\n\nNumber of bytes read = %d bytes\n", bitcount);
+
+/*printf("%d\n", CLOCKS_PER_SEC);
+printf("Time of execution: %f seconds\n", (double)(end - begin) / CLOCKS_PER_SEC);*/
+
+printf("Time elapsed: &#37;f\n", elapsed);
+
+tcsetattr(fd,TCSANOW,&oldtio);
+close(fd);
+return 0;
 }
