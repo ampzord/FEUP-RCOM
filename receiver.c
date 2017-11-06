@@ -720,7 +720,11 @@ printf("\n\nNumber of bytes read = %d bytes\n", bitcount);
 /*printf("%d\n", CLOCKS_PER_SEC);
 printf("Time of execution: %f seconds\n", (double)(end - begin) / CLOCKS_PER_SEC);*/
 
-printf("Time elapsed: &#37;f\n", elapsed);
+printf("Time elapsed: %f\n", elapsed);
+
+printf("bytes read / exec time : %f\n", bitcount/elapsed);
+
+printf("bitcount/elapsed divided by BAUDRATE : %f\n", (bitcount/elapsed) / BAUDRATE);
 
 tcsetattr(fd,TCSANOW,&oldtio);
 close(fd);

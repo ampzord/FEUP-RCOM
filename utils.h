@@ -14,14 +14,14 @@
 #include <math.h>
 
 #define MODEMDEVICE "/dev/ttyS1"
-#define BAUDRATE B9600
+#define BAUDRATE 57600
 #define _POSIX_SOURCE 1 /* POSIX compliant source */
 #define FALSE 0
 #define TRUE 1
 
 #define ERR 0xFD
 #define ERR2 0xFE
-#define PACKET_SIZE 2048
+#define PACKET_SIZE 1024
 
 #define FLAG 0x7E
 #define FLAG_RECEIVER 0x7E
@@ -39,7 +39,7 @@
 
 #define SYNC_ERROR 0xFD
 #define BCC_ERROR 0xFE
-#define PACKET_MAX_SIZE 1024 
+#define PACKET_MAX_SIZE 2048 
 
 #define FRAME_START 0x02
 #define FRAME_DATA  0x01
