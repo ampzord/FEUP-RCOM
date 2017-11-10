@@ -231,7 +231,7 @@ int detectRRorREJ(int fd)
 /*
 * send the file packets through fd to the receiver
 */
-int sendInfoFile(int fd, unsigned char *buf, int size)
+int sendFilePacket(int fd, unsigned char *buf, int size)
 {
 	int newSize = (size + 6); //total size = original size + 6 because of the F, A, C, BCC1, BCC2, F bytes
 	int i, j, res, k;
@@ -305,20 +305,20 @@ int sendInfoFile(int fd, unsigned char *buf, int size)
 }
 
 /*
-* Handles the process of dividing file into PACKET_MAX_SIZE bytes portions. Returns the starting byte number of the packet being read
+* Handles the process of dividing file into PACKET SIZE bytes portions. Returns the starting byte number of the packet being read
 */
-int getInformationPacketet(int fd)
+int getDataPacket(int fd)
 {
 	int bytesRead = 0,res,read = 0;
 
 	unsigned char *dataPacket = (unsigned char *)malloc(PACKET_SIZE); //creates data packet with preset size
 
 	//READ PACKET_SIZE BYTES "AT A TIME"
-	while ((bytesRead = fread(dataPacket, sizeof(unsigned char), PACKET_SIZE, fp)) > 0) //reads from the fp FILE (global access) to the dataPacket to send, reading a char * PACKET_MAX_SIZE. this while cycles until it starts reading nothing (end of file)
+	while ((bytesRead = fread(dataPacket, sizeof(unsigned char), PACKET_SIZE, fp)) > 0) //reads from the fp FILE (global access) to the dataPacket to send, reading a char * PACKET_SIZE. this while cycles until it starts reading nothing (end of file)
 	{
 		while (conta < 4) //timeout limit
 		{
-			res = sendInfoFile(fd,dataPacket,bytesRead); //creates a "ready to send" data packet and writes it to fd, returning the number of bytes sent
+			res = sendFilePacket(fd,dataPacket,bytesRead); //creates a "ready to send" data packet and writes it to fd, returning the number of bytes sent
 
 			printf("Sending file, currently at: %d/%d (%.2lf%%/100%%).\n", read, fsize, ((double)read / fsize) * 100);
 
@@ -495,7 +495,7 @@ int llwrite(int fd)
 	printf("Entering LLWRITE\n");
 	int res;
 	buildStartPacket(fd);
-	res = getInformationPacketet(fd);
+	res = getDataPacket(fd);
 	endOfLL();
 	return res;
 }
