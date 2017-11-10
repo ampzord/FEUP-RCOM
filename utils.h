@@ -14,17 +14,16 @@
 #include <math.h>
 
 #define MODEMDEVICE "/dev/ttyS1"
-#define BAUDRATE 57600
+#define BAUDRATE 57600 //default - B9600
 #define _POSIX_SOURCE 1 /* POSIX compliant source */
 #define FALSE 0
 #define TRUE 1
 
-#define ERR 0xFD
-#define ERR2 0xFE
+#define SYNC_ERROR 0xFD //done
+#define BCC_ERROR 0xFE  //done
 #define PACKET_SIZE 1024
 
-#define FLAG 0x7E
-#define FLAG_RECEIVER 0x7E
+#define FLAG_RECEIVER 0x7E //done
 #define ADDRESS_SENDER_TO_RECEIVER 0x03
 #define CONTROL_UA 0x07
 #define CONTROL_DISC 0x0B
@@ -40,35 +39,32 @@
 #define SYNC_ERROR 0xFD
 #define BCC_ERROR 0xFE
 #define PACKET_MAX_SIZE 2048 
+//packet size to test : 128, 256 , 512, 1024, 2048
 
 #define FRAME_START 0x02
 #define FRAME_DATA  0x01
 #define FRAME_END 0x03
 
-
-
-
 int status = TRUE;
-volatile int STOP=FALSE;
-volatile int readFile=FALSE;
+volatile int STOP = FALSE;
+volatile int readFile = FALSE;
 volatile int readStart = FALSE;
-volatile int packetValidated=FALSE;
+volatile int packetValidated = FALSE;
 
 typedef struct{
 	char arr[5];
-} ResponseArray;
+} ReplyArray;
 
 typedef struct{
 	char* arr;
 	int size;
-} DataPack;
+} InformationPacket;
 
 typedef struct{
 	char* arr;
 	int namelength;
 	int fileSize;
-} FileData;
-
+} FileInformation;
 
 typedef struct{
 	int sentMessages;
@@ -84,18 +80,8 @@ typedef struct{
 	int rejSent;
 } ReceiverStatistics;
 
-
-FileData file;
+FileInformation file;
 FILE *fp;
 SenderStatistics senderStats;
 ReceiverStatistics receiverStats;
-
-void printArray(char* arr,size_t length){
-
-	int index;
-	for( index = 0; index < length; index++){
-			printf( "0x%X\n", (unsigned char)arr[index] );
-	}
-}
-
 #endif

@@ -3,12 +3,12 @@
 int RR_RECEIVED = FALSE;
 int REJ_RECEIVED = FALSE;
 
-FileData file;
+FileInformation file;
 
 unsigned char C1 = 0x40;
 int fsize;
 FILE *fp;
-int flag=0, conta=1;
+int flag=0, conta=1; //globals for timeouts
 
 void printSenderStats() {
 	printf("\n\n---------------------------------------\n");
@@ -69,7 +69,7 @@ void atende()
 int readSupervisionPacket(unsigned char C, int fd)
 {
 	char buf[1];
-	char sup[5] = {FLAG, 0x03, C, 0x03^C, 0x7E}; //creates a temporary frame that matches the "correct" answer
+	char sup[5] = {FLAG_RECEIVER, 0x03, C, 0x03^C, FLAG_RECEIVER}; //creates a temporary frame that matches the "correct" answer
 	int counter = 0;
 	int errorflag =0;	//checks for any errors during reading. if any byte does not correspond to the "correct" answer, this flag gets <0 value
 
@@ -111,13 +111,12 @@ int readSupervisionPacket(unsigned char C, int fd)
 	return -1;
 }
 
-int writeBytes(int fd)
+int writeUa(int fd)
 {
-	char ua[5] = {0x7E,0x03,0x07,0x03^0x07,0x7E};
+	char ua[5] = {FLAG_RECEIVER,0x03,0x07,0x03^0x07,FLAG_RECEIVER};
 	int res;
 
 	res = write(fd,ua,5);
-	//printArray(ua,5);
 	printf("UA frame sent with the following values: %02x %02x %02x %02x %02x\n", ua[0], ua[1], ua[2], ua[3], ua[4]);
 	return res;
 }
@@ -125,7 +124,7 @@ int writeBytes(int fd)
 void writeSet(int fd)
 {
 	int res;
-	char set[5] = {0x7E,0x03,0x03,0x00,0x7E};
+	char set[5] = {FLAG_RECEIVER,0x03,0x03,0x00,FLAG_RECEIVER};
 	res=write(fd,set,5);
 	printf("SET frame sent with the following values: %02x %02x %02x %02x %02x\n", set[0], set[1], set[2], set[3], set[4]);
 }
@@ -143,14 +142,14 @@ int sendReadDISC(int fd,int toRead)
 	}
 
 	unsigned char disc[5];
-	unsigned char A=0x03;
+	unsigned char A = 0x03;
 	unsigned char C = 0x0B;
 	unsigned char BCC1 = A^C;
-	disc[0] = FLAG;
+	disc[0] = FLAG_RECEIVER;
 	disc[1] = A;
 	disc[2] = C;
 	disc[3] = BCC1;
-	disc[4] = FLAG;
+	disc[4] = FLAG_RECEIVER;
 
 	write(fd,disc,5);
 	printf("DISC frame sent with the following values: %02x %02x %02x %02x %02x\n", disc[0], disc[1], disc[2], disc[3], disc[4]);
@@ -174,7 +173,7 @@ int detectRRorREJ(int fd)
 	read(fd,buf,5);
 	
 	//FLAG
-	if(buf[0] != 0x7E){
+	if(buf[0] != FLAG_RECEIVER){
 		//printf("Error reading the first 0x7E flag!\n");
 		return -1;
 	}
@@ -194,7 +193,7 @@ int detectRRorREJ(int fd)
 		}
 
 		//FLAG
-		if (buf[4] != 0x7E) {
+		if (buf[4] != FLAG_RECEIVER) {
 			printf("Error reading the second 0x7E flag!\n");
 			return -1;
 		}
@@ -202,7 +201,6 @@ int detectRRorREJ(int fd)
 		//SUCCESS
 		printf("REJ read successfully with the values: %02x %02x %02x %02x %02x\n", buf[0], buf[1], buf[2], buf[3], buf[4]);
 		REJ_RECEIVED=TRUE;
-		//printArray(buf,5);
 		return 1;
 	}
 
@@ -224,7 +222,6 @@ int detectRRorREJ(int fd)
 		//SUCCESS
 		printf("RR read successfully with the values: %02x %02x %02x %02x %02x\n", buf[0], buf[1], buf[2], buf[3], buf[4]);
 		RR_RECEIVED=TRUE;
-		//printArray(buf,5);
 		switchC1();
 		return 0;
 	}
@@ -242,7 +239,7 @@ int sendInfoFile(int fd, unsigned char *buf, int size)
 
 	for (i = 0; i < size; i++) //cycles though the original packet to check if there's any 0x7E or 0x7D. if so, the total size of the packet post-stuffing is increased by one of each found
 	{
-		if (buf[i] == 0x7E || buf[i] == 0x7D)
+		if (buf[i] == FLAG_RECEIVER || buf[i] == 0x7D)
 		{
 			newSize++;
 		}
@@ -258,7 +255,7 @@ int sendInfoFile(int fd, unsigned char *buf, int size)
 	//creates the new packet
 	unsigned char *dataPacket = (unsigned char*)malloc(newSize);
 
-	dataPacket[0] = FLAG;
+	dataPacket[0] = FLAG_RECEIVER;
 	dataPacket[1] = 0x03;
 	dataPacket[2] = C1;
 	BCC1 = dataPacket[1]^C1;
@@ -269,7 +266,7 @@ int sendInfoFile(int fd, unsigned char *buf, int size)
 	k = 4;
 	for (i = 0; i < size;i++)
 	{
-		if (buf[i] == 0x7E)
+		if (buf[i] == FLAG_RECEIVER)
 		{
 			dataPacket[k] = 0x7D;
 			dataPacket[j] = 0x5E;
@@ -285,7 +282,7 @@ int sendInfoFile(int fd, unsigned char *buf, int size)
 			j++;
 		}
 
-		if(buf[i] != 0x7D && buf[i] != 0x7E)
+		if(buf[i] != 0x7D && buf[i] != FLAG_RECEIVER)
 			dataPacket[k] = buf[i];
 
 		j++;
@@ -294,7 +291,7 @@ int sendInfoFile(int fd, unsigned char *buf, int size)
 	//ENDS STUFFING
 
 	dataPacket[newSize-2] = BCC2;
-	dataPacket[newSize-1] = FLAG;
+	dataPacket[newSize-1] = FLAG_RECEIVER;
 	//ENDS I FRAME FLAGS
 
 	//writes complete and stuffed packet to fd
@@ -310,7 +307,7 @@ int sendInfoFile(int fd, unsigned char *buf, int size)
 /*
 * Handles the process of dividing file into PACKET_MAX_SIZE bytes portions. Returns the starting byte number of the packet being read
 */
-int getDataPacket(int fd)
+int getInformationPacketet(int fd)
 {
 	int bytesRead = 0,res,read = 0;
 
@@ -414,7 +411,7 @@ unsigned char *buildStartPacket(int fd)
 	int sizeFinal = startBufSize+6;
 	for (i = 0; i < startBufSize;i++)
 	{
-		if (startBuf[i] == 0x7E || startBuf[i] == 0x7D)
+		if (startBuf[i] == FLAG_RECEIVER || startBuf[i] == 0x7D)
 			sizeFinal++;
 	}
 
@@ -428,7 +425,7 @@ unsigned char *buildStartPacket(int fd)
 	unsigned char *dataPackage;
 
 	//hard code stuffing and insertion of bcc2
-	if (BCC2 == 0x7E)
+	if (BCC2 == FLAG_RECEIVER)
 	{
 		dataPackage = (unsigned char *)malloc(sizeFinal+1);
 		dataPackage[sizeFinal-3] = 0x7D;
@@ -442,14 +439,14 @@ unsigned char *buildStartPacket(int fd)
 		dataPackage[sizeFinal-2] = 0x5D;
 	}
 
-	if (BCC2 != 0x7D && BCC2 != 0x7E)
+	if (BCC2 != 0x7D && BCC2 != FLAG_RECEIVER)
 	{
 		 dataPackage = (unsigned char *)malloc(sizeFinal);
 		 dataPackage[sizeFinal-2] = BCC2;
 	}
 
 	//STARTING FLAGS
-	dataPackage[0] = FLAG;
+	dataPackage[0] = FLAG_RECEIVER;
 	dataPackage[1] = A;
 	dataPackage[2] = 0x00;
 	BCC1 = A^dataPackage[2];
@@ -460,7 +457,7 @@ unsigned char *buildStartPacket(int fd)
 	int k=4;
 	for (i = 0; i < startBufSize;i++)
 	{
-		if (startBuf[i] == 0x7E)
+		if (startBuf[i] == FLAG_RECEIVER)
 		{
 			dataPackage[k] = 0x7D;
 			dataPackage[j] = 0x5E;
@@ -476,7 +473,7 @@ unsigned char *buildStartPacket(int fd)
 			j++;
 		}
 
-		if(startBuf[i] != 0x7D && startBuf[i] != 0x7E)
+		if(startBuf[i] != 0x7D && startBuf[i] != FLAG_RECEIVER)
 			dataPackage[k] = startBuf[i];
 
 		j++;
@@ -484,7 +481,7 @@ unsigned char *buildStartPacket(int fd)
 	}
 	//FINISH STUFFING
 
-	dataPackage[sizeFinal-1] = FLAG;
+	dataPackage[sizeFinal-1] = FLAG_RECEIVER;
 	//FINISH FLAGS
 
 	int res;
@@ -498,7 +495,7 @@ int llwrite(int fd)
 	printf("Entering LLWRITE\n");
 	int res;
 	buildStartPacket(fd);
-	res = getDataPacket(fd);
+	res = getInformationPacketet(fd);
 	endOfLL();
 	return res;
 }
@@ -563,7 +560,7 @@ int llclose(int fd)
 		return -1;	
 	
 	}
-	res = writeBytes(fd); //writes UA
+	res = writeUa(fd); //writes UA
 	if (res == 5)
 	{
 		printf("UA frame sent! Leaving LLCLOSE...\n");
@@ -608,7 +605,7 @@ int cycle(int fd)
 		}
 	}
 
-	if(llclose(fd)==-1)
+	if (llclose(fd) == -1)
 		cycle(fd);
 	return 0;
 }
@@ -650,9 +647,8 @@ int main(int argc, char** argv)
 	newtio.c_iflag = IGNPAR;
 	newtio.c_oflag = 0;
 	newtio.c_lflag = 0;
-
-	newtio.c_cc[VTIME]    = 3;
-	newtio.c_cc[VMIN]     = 0;
+	newtio.c_cc[VTIME] = 3;
+	newtio.c_cc[VMIN] = 0;
 
 	tcflush(fd, TCIOFLUSH);
 
