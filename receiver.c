@@ -713,9 +713,11 @@ printf("Time elapsed: %f\n", elapsed);
 
 printf("bytes read / exec time : %f\n", bitcount/elapsed);
 
-printf(" (byte read/exec time) / BAUDRATE : %f\n", (bitcount/elapsed) / BAUDRATE);
+printf(" (byte read/exec time) / BAUDRATE : %f\n",((double) (bitcount/elapsed) / BAUDRATE));
 
-printf("packet size : %d",PACKET_SIZE); 
+printf("packet size : %d\n",PACKET_SIZE); 
+
+//printf("BAUDRATE : %d\n",BAUDRATE); 
 
 tcsetattr(fd,TCSANOW,&oldtio);
 close(fd);
