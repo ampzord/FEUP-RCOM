@@ -28,47 +28,46 @@ static int connectSocket(const char* ip, int port) {
 
 int connectFTP( const char* ip, int port, ftp_socket_info_t* ftp){
 
-	char rd[STR_SIZE];
+	char rd[URL_SIZE];
+	ftp->information = 0;
 
-	ftp->data = 0;
-
-	if ((ftp->control = connectSocket(ip, port)) < 0) {
-		printf("Socket cannot be connected - connectFTP.\n");
+	if ((ftp->command_port = connectSocket(ip, port)) < 0) {
+		printf("ERROR - Cannot connect Socket - connectFTP.\n");
 		return 1;
 	}
 
-	if(readFromFTP(ftp->control, rd, sizeof(rd))){
-		printf("Read from FTP failed - connectFTP.\n");
+	if(readFromFTP(ftp->command_port, rd, sizeof(rd))){
+		printf("ERROR - Cannot read from FTP - connectFTP.\n");
 		return 1;
 	}
 	return 0;
 }
 
 int loginFTP(const char* user, const char* password, ftp_socket_info_t* ftp){
-	char userTest[STR_SIZE];
-	char passTest[STR_SIZE];
+	char userTest[URL_SIZE];
+	char passTest[URL_SIZE];
 
 	sprintf(userTest, "USER %s\r\n", user);
 	sprintf(passTest, "PASS %s\r\n", password);
 
 
-	if(sendToFTP(ftp->control, userTest, strlen(userTest))) {
+	if(sendToFTP(ftp->command_port, userTest, strlen(userTest))) {
 		printf("Sending to FTP failed - loginFTP.\n");
 		return 1;
 	}
 
-	if(readFromFTP(ftp->control, userTest, STR_SIZE)){
+	if(readFromFTP(ftp->command_port, userTest, URL_SIZE)){
 		printf("Read from FTP failed - loginFTP.\n");
 		return 1;
 	}
 
-	if(sendToFTP(ftp->control, passTest, strlen(passTest))){
+	if(sendToFTP(ftp->command_port, passTest, strlen(passTest))){
 		printf("Sending to FTP failed - loginFTP.\n");
 		return 1;
 	}
 
 
-	if(readFromFTP(ftp->control, passTest, STR_SIZE)){
+	if(readFromFTP(ftp->command_port, passTest, URL_SIZE)){
 		printf("Read from FTP failed - loginFTP().\n");
 		return 1;
 	}
@@ -78,58 +77,54 @@ int loginFTP(const char* user, const char* password, ftp_socket_info_t* ftp){
 
 int changeDirFTP(const char* path, ftp_socket_info_t* ftp)
 {
-	char currPath[STR_SIZE];
+	char currentPath[URL_SIZE];
+	sprintf(currentPath, "CWD %s\r\n", path);
 
-	sprintf(currPath, "CWD %s\r\n", path);
-
-	if(sendToFTP(ftp->control, currPath, strlen(currPath))){
-		printf("Sending to FTP failed - changeDirFTP().\n");
+	if(sendToFTP(ftp->command_port, currentPath, strlen(currentPath))){
+		printf("ERROR - Cannot send to FTP.\n");
 		return 1;
 	}
 
-
-	if(readFromFTP(ftp->control, currPath, STR_SIZE)){
-		printf("Read from FTP failed - changeDirFTP().\n");
+	if(readFromFTP(ftp->command_port, currentPath, URL_SIZE)){
+		printf("ERROR - Cannot read from FTP.\n");
 		return 1;
 	}
 
 	return 0;
 }
 
-
-
 int passiveModeFTP(ftp_socket_info_t* ftp)
 {
-	char passive[STR_SIZE];
-	char passiveIp[STR_SIZE];
+	char passive[URL_SIZE];
+	char passiveIp[URL_SIZE];
 	sprintf(passive, "PASV\n");
 
-	if(sendToFTP(ftp->control, passive, strlen(passive)))
+	if(sendToFTP(ftp->command_port, passive, strlen(passive)))
 	{
-		printf("Sending to FTP failed - passiveModeFTP().\n");
+		printf("ERROR - Cannot send to FTP - passiveModeFTP().\n");
 		return 1;
 	}
 
-	if(readFromFTP(ftp->control, passive,STR_SIZE))
+	if(readFromFTP(ftp->command_port, passive,URL_SIZE))
 	{
-		printf("Read from FTP failed - passiveModeFTP().\n");
+		printf("ERROR - Cannot read from FTP - passiveModeFTP().\n");
 		return 1;
 	}
 
-	int ip1,ip2,ip3,ip4;
-	int port1, port2;
-	if((sscanf(passive,"227 Entering Passive Mode (%d,%d,%d,%d,%d,%d)", &ip1,&ip2,&ip3,&ip4,&port1,&port2)) < 0)
+	int ip_1,ip_2,ip_3,ip_4;
+	int port_1, port_2;
+	if((sscanf(passive,"227 Entering Passive Mode (%d,%d,%d,%d,%d,%d)", &ip_1,&ip_2,&ip_3,&ip_4,&port_1,&port_2)) < 0)
 	{
-		printf("Response is wrong.");
+		printf("ERROR - Passive mode response incorret.\n");
 		return 1;
 	}
 
-	sprintf(passiveIp,"%d.%d.%d.%d",ip1,ip2,ip3,ip4);
-	int port = port1*256 + port2;
+	sprintf(passiveIp,"%d.%d.%d.%d",ip_1,ip_2,ip_3,ip_4);
+	int port = (port_1 * 256) + port_2;
 
-	if((ftp->data = connectSocket(passiveIp,port)) < 0)
+	if((ftp->information = connectSocket(passiveIp,port)) < 0)
 	{
-		printf("Passive mode cannot be entered.");
+		printf("ERROR - Cannot enter passive mode.\n");
 		return 1;
 	}
 	return 0;
@@ -137,18 +132,17 @@ int passiveModeFTP(ftp_socket_info_t* ftp)
 
 int copyFileFTP(const char* filename, ftp_socket_info_t* ftp)
 {
-	char retr[STR_SIZE];
-
+	char retr[URL_SIZE];
 	sprintf(retr, "RETR %s\n", filename);
 
-	if(sendToFTP(ftp->control, retr, strlen(retr))){
-		printf("Sending to FTP failed - copyFileFTP().\n");
+	if(sendToFTP(ftp->command_port, retr, strlen(retr))){
+		printf("ERROR - Cannot send to FTP - copyFileFTP().\n");
 		return 1;
 	}
 
 
-	if(readFromFTP(ftp->control, retr, STR_SIZE)){
-		printf("Read from FTP failed - copyFileFTP().\n");
+	if(readFromFTP(ftp->command_port, retr, URL_SIZE)){
+		printf("ERROR - Cannot read from FTP - copyFileFTP().\n");
 		return 1;
 	}
 	return 0;
@@ -158,108 +152,106 @@ int downloadFileFTP(const char* filename, ftp_socket_info_t* ftp)
 {
 	FILE* fp;
 	int bytes;
+	char buf[URL_SIZE];
 
 	if (!(fp = fopen(filename, "w")))
 	{
-		printf("Can't open file - downloadFileFTP().\n");
+		printf("ERROR - Cannot open file to write information- downloadFileFTP().\n");
 		return 1;
 	}
 
-	char buf[STR_SIZE];
-
-	while((bytes = read(ftp->data, buf, sizeof(buf))))
+	while((bytes = read(ftp->information, buf, sizeof(buf))))
 	{
 		if (bytes < 0) {
-			printf("Received no data - downloadFileFTP().\n");
+			printf("ERROR - No information was received - downloadFileFTP().\n");
 			return 1;
 		}
 
 		if((bytes = fwrite(buf,bytes, 1 , fp)) < 0 )
 		{
-			printf("Write failed - downloadFileFTP().\n");
+			printf("ERROR - Cannot write to file - downloadFileFTP().\n");
 			return 1;
 		}
 	}
 
 	fclose(fp);
-	close(ftp->data);
+	close(ftp->information);
 	return 0;
 }
 
 int disconnectFromFTP(ftp_socket_info_t* ftp)
 {
-	char disc[STR_SIZE];
+	char disc[URL_SIZE];
 	sprintf(disc, "QUIT\n");
 
-	if(sendToFTP(ftp->control, disc, strlen(disc)))
+	if(sendToFTP(ftp->command_port, disc, strlen(disc)))
 	{
-		printf("Sending to FTP failed - disconnectFromFTP().\n");
+		printf("ERROR - Cannot send to FTP - disconnectFromFTP().\n");
 		return 1;
 	}
 
-	if(readFromFTP(ftp->control, disc, STR_SIZE))
+	if(readFromFTP(ftp->command_port, disc, URL_SIZE))
 	{
-		printf("Read from FTP failed - disconnectFromFTP().\n");
+		printf("ERROR - Cannot read from FTP - disconnectFromFTP().\n");
 		return 1;
 	}
 
 	return 0;
 }
 
-int sendToFTP(int ftpControl, char* str, size_t size)
+int sendToFTP(int ftp_control, char* str, size_t size)
 {
-	write(ftpControl,str,size);
-	printf("Sent: %s", str);
+	write(ftp_control,str,size);
+	printf("Sending to FTP : %s", str);
 	return 0;
 }
 
-
-int readFromFTP(int ftpControl, char* str, size_t size)
+int readFromFTP(int ftp_control, char* str, size_t size)
 {
-	FILE* fp = fdopen(ftpControl, "r");
+	FILE* fp = fdopen(ftp_control, "r");
 
 	fgets(str, size, fp);
-	printf("%s", str);
+	printf("Reading from FTP : %s", str);
 
 	return 0;
 }
 
-int parsePath(char * fullPath, url_t *url)
+int parseURLPath(char * fullPath, url_t *url)
 {
-	int i = 0, willHaveLogin = 0, counter = 0;
-
-	char model[STR_SIZE];
+	int authenticatedLogin = 0;
+	int counter = 0;
+	char model[URL_SIZE];
+	
+	
+	//Check if the first part of url is "ftp://"
 	sprintf (model, "ftp://");
-
-	//Check if Path starts with "ftp://"
+	int i = 0;
 	while (i <= 5)
 	{
 		if (fullPath[i] != model[i])
 		{
-			printf("Wrong input\n");
+			printf("The first part of the URL path is not correct, expected : \"ftp://\" \n");
 			return 1;
 		}
 		i++;
 	}
 
 	counter = 6;
-
-	//Check if path will recquire username and password
+	//Check if URL is authenticated or anonymous
 	if (fullPath[counter] == '[')
-		willHaveLogin = TRUE;
+		authenticatedLogin = TRUE;
 	else
-		willHaveLogin = FALSE;
+		authenticatedLogin = FALSE;
 
 	int ctrl = 0;
-
-	//This if statement makes sure that user and password are correctly stored in the struct
-	if (willHaveLogin)
+	//Check if username and password are stored correctly
+	if (authenticatedLogin)
 	{
+		char* tempUser = malloc(URL_SIZE);
 		counter++;
 		ctrl = 0;
-		char * tempUser = malloc(STR_SIZE);
 
-		//Reading username
+		//Username
 		while (fullPath[counter] != ':')
 		{
 			tempUser[ctrl] = fullPath[counter];
@@ -272,9 +264,9 @@ int parsePath(char * fullPath, url_t *url)
 		counter++;
 
 		ctrl = 0;
-		char * tempPass = malloc(STR_SIZE);
+		char* tempPass = malloc(URL_SIZE);
 
-		//Reading password
+		//Password
 		while (fullPath[counter] != '@')
 		{
 			tempPass[ctrl] = fullPath[counter];
@@ -311,7 +303,7 @@ int parsePath(char * fullPath, url_t *url)
 	}
 
 	ctrl = 0;
-	char * tempHost = malloc(STR_SIZE);
+	char* tempHost = malloc(URL_SIZE);
 	while (fullPath[counter] != '/')
 	{
 		tempHost[ctrl] = fullPath[counter];
@@ -323,8 +315,8 @@ int parsePath(char * fullPath, url_t *url)
 	free(tempHost);
 
 	ctrl = 0;
-	char * tempPath = malloc(STR_SIZE);
-	char* filename = malloc(STR_SIZE);
+	char * tempPath = malloc(URL_SIZE);
+	char* filename = malloc(URL_SIZE);
 	int fileCounter = 0;
 	counter++;
 	while (fullPath[counter] != '\0')
@@ -337,7 +329,7 @@ int parsePath(char * fullPath, url_t *url)
 			fileCounter++;
 		}
 		else{
-			memset(filename, 0, STR_SIZE);
+			memset(filename, 0, URL_SIZE);
 			fileCounter = 0;
 		}
 
@@ -354,19 +346,16 @@ int parsePath(char * fullPath, url_t *url)
 	return 0;
 }
 
-
 int getIpByHost(url_t* url)
 {
 	struct hostent *h;
 
-
-	printf("Host name url  : %s\n", url->host);
+	printf("Host Name url  : %s\n", url->host);
 
 	if ((h=gethostbyname(url->host)) == NULL) {
-		herror("gethostbyname");
+		herror("Error in gethostbyname");
 		exit(1);
 	}
-
 
 	char* ip = inet_ntoa(*((struct in_addr *)h->h_addr));
 	url->ip=malloc(sizeof(ip));
@@ -375,33 +364,45 @@ int getIpByHost(url_t* url)
 	return 0;
 }
 
+void printProgramUsage(char* argv) {
+	printf("1 - Anonymous usage: %s ftp://<host>/<url-path>\n", argv);
+	printf("2 - Authenticated usage: %s ftp://[<user>:<password>@]<host>/<url-path>\n\n", argv);
+}
+
+
 int main(int argc, char** argv){
-
-	if(argc != 2){
-		perror("Incorrect number of arguments");
-		exit(0);
-	}
-
+	
 	url_t url;
-
-	if(parsePath(argv[1] , &url)){
-		perror("Failed on parsing path");
+	ftp_socket_info_t ftp;
+	int port = 21;
+	
+	//Arguments
+	if(argc != 2){
+		perror("\nIncorrect number of arguments\n");
+		printProgramUsage(argv[0]);
 		exit(0);
 	}
 
+	//URL
+	if(parseURLPath(argv[1] , &url)){
+		perror("ERROR - parsing URL path");
+		exit(0);
+	}
+
+	//DEBUG MODE
 	printf("path: %s\n", url.path);
 	printf("host: %s\n", url.host);
 	printf("username: %s\n", url.username);
 	printf("pass: %s\n", url.password);
 	printf("filename: %s\n", url.filename);
 
+	//Getting IP from Hostname
 	getIpByHost(&url);
 
-	int port = 21;
-	ftp_socket_info_t ftp;
-
+	//Connecting to FTP
 	connectFTP(url.ip, port, &ftp);
 
+	//
 	loginFTP(url.username,url.password, &ftp);
 
 	changeDirFTP(url.path,&ftp);

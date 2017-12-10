@@ -14,16 +14,16 @@
 #include <string.h>
 #include <errno.h>
 
-#define SERVER_PORT 6000
-#define SERVER_ADDR "192.168.28.96"
-
-#define STR_SIZE 256
 #define TRUE 1
 #define FALSE 0
 
+#define URL_SIZE 256
+#define SERVER_PORT 6000
+#define SERVER_ADDR "192.168.28.96"
+
 typedef struct {
-	int data;
-	int control;
+	int information;
+	int command_port;
 } ftp_socket_info_t;
 
 typedef	struct {
@@ -35,7 +35,7 @@ typedef	struct {
 	char* ip;
 } url_t;
 
-int parsePath(char * fullPath, url_t *url);
+int parseURLPath(char* fullPath, url_t *url);
 
 int getIpByHost(url_t* url);
 
@@ -55,9 +55,9 @@ int downloadFileFTP(const char* filename, ftp_socket_info_t* ftp);
 
 int disconnectFromFTP(ftp_socket_info_t* ftp);
 
-int sendToFTP(int ftpControl, char* str, size_t size);
+int sendToFTP(int ftp_control, char* str, size_t size);
 
-int readFromFTP(int ftpControl, char* str, size_t size);
+int readFromFTP(int ftp_control, char* str, size_t size);
 
 int main(int argc, char** argv);
 
