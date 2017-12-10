@@ -37,28 +37,26 @@ typedef	struct {
 
 int parseURLPath(char* fullPath, url_t *url);
 
-int getIpByHost(url_t* url);
+int getIPFromHost(url_t* url);
 
 static int connectSocket(const char* ip, int port);
 
-int connectFTP( const char* ip, int port, ftp_socket_info_t* ftp);
+int connectThroughFTP( const char* ip, int port, ftp_socket_info_t* ftp);
 
-int loginFTP(const char* user, const char* password, ftp_socket_info_t* ftp);
+int loginThroughFTP(const char* user, const char* password, ftp_socket_info_t* ftp);
 
-int changeDirFTP(const char* path, ftp_socket_info_t* ftp);
+int changeDirectoryThroughFTP(const char* path, ftp_socket_info_t* ftp);
 
-int passiveModeFTP(ftp_socket_info_t* ftp);
+int enterPassiveModeFTP(ftp_socket_info_t* ftp);
 
-int copyFileFTP(const char* filename, ftp_socket_info_t* ftp);
+int copyFileToFTP(const char* filename, ftp_socket_info_t* ftp);
 
-int downloadFileFTP(const char* filename, ftp_socket_info_t* ftp);
+int downloadFileFromFTP(const char* filename, ftp_socket_info_t* ftp);
 
 int disconnectFromFTP(ftp_socket_info_t* ftp);
 
 int sendToFTP(int ftp_control, char* str, size_t size);
 
 int readFromFTP(int ftp_control, char* str, size_t size);
-
-int main(int argc, char** argv);
 
 #endif /* FTP_H */

@@ -26,7 +26,7 @@ static int connectSocket(const char* ip, int port) {
 	return sockfd;
 }
 
-int connectFTP( const char* ip, int port, ftp_socket_info_t* ftp){
+int connectThroughFTP( const char* ip, int port, ftp_socket_info_t* ftp){
 
 	char rd[URL_SIZE];
 	ftp->information = 0;
@@ -43,7 +43,7 @@ int connectFTP( const char* ip, int port, ftp_socket_info_t* ftp){
 	return 0;
 }
 
-int loginFTP(const char* user, const char* password, ftp_socket_info_t* ftp){
+int loginThroughFTP(const char* user, const char* password, ftp_socket_info_t* ftp){
 	char userTest[URL_SIZE];
 	char passTest[URL_SIZE];
 
@@ -75,7 +75,7 @@ int loginFTP(const char* user, const char* password, ftp_socket_info_t* ftp){
 	return 0;
 }
 
-int changeDirFTP(const char* path, ftp_socket_info_t* ftp)
+int changeDirectoryThroughFTP(const char* path, ftp_socket_info_t* ftp)
 {
 	char currentPath[URL_SIZE];
 	sprintf(currentPath, "CWD %s\r\n", path);
@@ -93,7 +93,7 @@ int changeDirFTP(const char* path, ftp_socket_info_t* ftp)
 	return 0;
 }
 
-int passiveModeFTP(ftp_socket_info_t* ftp)
+int enterPassiveModeFTP(ftp_socket_info_t* ftp)
 {
 	char passive[URL_SIZE];
 	char passiveIp[URL_SIZE];
@@ -130,7 +130,7 @@ int passiveModeFTP(ftp_socket_info_t* ftp)
 	return 0;
 }
 
-int copyFileFTP(const char* filename, ftp_socket_info_t* ftp)
+int copyFileToFTP(const char* filename, ftp_socket_info_t* ftp)
 {
 	char retr[URL_SIZE];
 	sprintf(retr, "RETR %s\n", filename);
@@ -148,7 +148,7 @@ int copyFileFTP(const char* filename, ftp_socket_info_t* ftp)
 	return 0;
 }
 
-int downloadFileFTP(const char* filename, ftp_socket_info_t* ftp)
+int downloadFileFromFTP(const char* filename, ftp_socket_info_t* ftp)
 {
 	FILE* fp;
 	int bytes;
@@ -292,9 +292,8 @@ int parseURLPath(char * fullPath, url_t *url)
 		}
 		counter++;
 	}
-	else
-	{
-		//If there's no username and password, these fields become 'ftp'
+	// Anonymous login : username ftp , password ftp
+	else {
 		url->username = malloc(strlen("ftp")+1);
 		strncpy(url->username,"ftp",strlen("ftp")+1);
 
@@ -304,8 +303,7 @@ int parseURLPath(char * fullPath, url_t *url)
 
 	ctrl = 0;
 	char* tempHost = malloc(URL_SIZE);
-	while (fullPath[counter] != '/')
-	{
+	while (fullPath[counter] != '/') {
 		tempHost[ctrl] = fullPath[counter];
 		counter++;
 		ctrl++;
@@ -319,9 +317,7 @@ int parseURLPath(char * fullPath, url_t *url)
 	char* filename = malloc(URL_SIZE);
 	int fileCounter = 0;
 	counter++;
-	while (fullPath[counter] != '\0')
-	{
-
+	while (fullPath[counter] != '\0') {
 		tempPath[ctrl] = fullPath[counter];
 
 		if(tempPath[ctrl]!='/'){
@@ -346,14 +342,14 @@ int parseURLPath(char * fullPath, url_t *url)
 	return 0;
 }
 
-int getIpByHost(url_t* url)
+int getIPFromHost(url_t* url)
 {
 	struct hostent *h;
 
-	printf("Host Name url  : %s\n", url->host);
+	printf("Host Name URL  : %s\n", url->host);
 
 	if ((h=gethostbyname(url->host)) == NULL) {
-		herror("Error in gethostbyname");
+		herror("gethostbyname");
 		exit(1);
 	}
 
@@ -376,7 +372,7 @@ int main(int argc, char** argv){
 	ftp_socket_info_t ftp;
 	int port = 21;
 	
-	//Arguments
+	//Checking number of arguments
 	if(argc != 2){
 		perror("\nIncorrect number of arguments\n");
 		printProgramUsage(argv[0]);
@@ -390,29 +386,34 @@ int main(int argc, char** argv){
 	}
 
 	//DEBUG MODE
-	printf("path: %s\n", url.path);
-	printf("host: %s\n", url.host);
-	printf("username: %s\n", url.username);
-	printf("pass: %s\n", url.password);
-	printf("filename: %s\n", url.filename);
+	printf("Username: %s\n", url.username);
+	printf("Password: %s\n", url.password);
+	printf("Host : %s\n", url.host);
+	printf("Path : %s\n", url.path);
+	printf("Filename: %s\n", url.filename);
 
 	//Getting IP from Hostname
-	getIpByHost(&url);
+	getIPFromHost(&url);
 
 	//Connecting to FTP
-	connectFTP(url.ip, port, &ftp);
+	connectThroughFTP(url.ip, port, &ftp);
 
-	//
-	loginFTP(url.username,url.password, &ftp);
+	//logging in FTP
+	loginThroughFTP(url.username,url.password, &ftp);
 
-	changeDirFTP(url.path,&ftp);
+	//Changing directory to file's directory
+	changeDirectoryThroughFTP(url.path,&ftp);
 
-	passiveModeFTP(&ftp);
+	//Entering Passive mode 
+	enterPassiveModeFTP(&ftp);
 
-	copyFileFTP(url.filename,&ftp);
+	//Copying file
+	copyFileToFTP(url.filename,&ftp);
 
-	downloadFileFTP(url.filename,&ftp);
+	//Downloading File 
+	downloadFileFromFTP(url.filename,&ftp);
 
+	//Disconneting from FTP
 	disconnectFromFTP(&ftp);
 
 	return 0;
