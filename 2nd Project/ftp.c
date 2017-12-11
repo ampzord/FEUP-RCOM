@@ -1,29 +1,33 @@
 #include "ftp.h"
 
 static int connectSocket(const char* ip, int port) {
-	int sockfd;
+	int sock_fd;
 	struct sockaddr_in server_addr;
 
-	// server address handling
+	//Server handling
 	bzero((char*) &server_addr, sizeof(server_addr));
 	server_addr.sin_family = AF_INET;
-	server_addr.sin_addr.s_addr = inet_addr(ip); /*32 bit Internet address network byte ordered*/
-	server_addr.sin_port = htons(port); /*server TCP port must be network byte ordered */
 
-	// open an TCP socket
-	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+	//Internet address network
+	server_addr.sin_addr.s_addr = inet_addr(ip);
+
+	//TCP server port
+	server_addr.sin_port = htons(port); 
+
+	//Open TCP socket
+	if ((sock_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
 		perror("socket()");
 		return -1;
 	}
 
-	// connect to the server
-	if (connect(sockfd, (struct sockaddr *) &server_addr, sizeof(server_addr))
+	//Connect to server
+	if (connect(sock_fd, (struct sockaddr *) &server_addr, sizeof(server_addr))
 			< 0) {
 		perror("connect()");
 		return -1;
 	}
 
-	return sockfd;
+	return sock_fd;
 }
 
 int connectThroughFTP( const char* ip, int port, ftp_socket_info_t* ftp){
@@ -216,7 +220,7 @@ int readFromFTP(int ftp_control, char* str, size_t size)
 	return 0;
 }
 
-int parseURLPath(char * fullPath, url_t *url)
+int parseURLPath(char * fullPath, url_info_t *url)
 {
 	int authenticatedLogin = 0;
 	int counter = 0;
@@ -342,7 +346,7 @@ int parseURLPath(char * fullPath, url_t *url)
 	return 0;
 }
 
-int getIPFromHost(url_t* url)
+int getIPFromHost(url_info_t* url)
 {
 	struct hostent *h;
 
@@ -368,7 +372,7 @@ void printProgramUsage(char* argv) {
 
 int main(int argc, char** argv){
 	
-	url_t url;
+	url_info_t url;
 	ftp_socket_info_t ftp;
 	int port = 21;
 	
