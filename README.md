@@ -6,13 +6,9 @@ Repository for Computer Networks class @ FEUP.
 
 Implementation of an asynchronous communication protocol for transmitting files through the serial port RS-232.
 
----
-
 ## Project 2
 
 Development of an FTP download application.
-
----
 
 Usage
 ```sh
